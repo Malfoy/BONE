@@ -55,11 +55,17 @@ vector<string> noMom(vector<pair<string,string>>& pairList, unordered_map<string
 			}
 		}
 	}
+	vector<string> toErase;
 	for(auto it(kmerCount.begin());it!=kmerCount.end();++it){
 		if(hasMom.count(it->first)==0){
+			//~ cout<<it->first<<endl;
 			result.push_back(it->first);
-			kmerCount.erase(it->first);
+			toErase.push_back(it->first);
+			//~ kmerCount.erase(it->first);
 		}
+	}
+	for(uint i(0);i<toErase.size();++i){
+		kmerCount.erase(toErase[i]);
 	}
 	return result;
 }
@@ -67,28 +73,37 @@ vector<string> noMom(vector<pair<string,string>>& pairList, unordered_map<string
 
 
 vector<string> noDaughter(vector<pair<string,string>>& pairList, unordered_map<string,uint>& kmerCount){
-	unordered_set<string> hasMom;
+	unordered_set<string> hasDaughter;
 	vector<string> result;
+	//~ cout<<"lol1"<<endl;
 	for(uint i(0);i<pairList.size();++i){
 		if(pairList[i].first!=""){
-			hasMom.insert(pairList[i].first);
+			hasDaughter.insert(pairList[i].first);
 		}
 	}
+	//~ cout<<"lol2"<<endl;
 	for(uint i(0);i<pairList.size();++i){
 		if(pairList[i].first!=""){
-			if(hasMom.count(pairList[i].second)==0){
+			if(hasDaughter.count(pairList[i].second)==0){
 				pairList[i]={"",""};
 			}
 		}
 	}
+	//~ cout<<"lol3"<<endl;
+	vector<string> toErase;
 	for(auto it(kmerCount.begin());it!=kmerCount.end();++it){
-		if(hasMom.count(it->first)==0){
+		if(hasDaughter.count(it->first)==0){
 			result.push_back(it->first);
-			kmerCount.erase(it->first);
+			toErase.push_back(it->first);
+			//~ kmerCount.erase(it->first);
 		}
+	}
+	for(uint i(0);i<toErase.size();++i){
+		kmerCount.erase(toErase[i]);
 	}
 	return result;
 }
+
 
 
 //TODO RC ?
@@ -97,7 +112,6 @@ int main(int argc, char ** argv){
 		cout<<"[read file (fasta oneline)] [kmer size] [solidity threshold value]"<<endl;
 		exit(0);
 	}
-
 	ifstream in(argv[1]);
 	uint k(stoi(argv[2]));
 	uint solid(stoi(argv[3]));
@@ -105,60 +119,74 @@ int main(int argc, char ** argv){
 	getline(in,header);
 	getline(in,query);
 	vector<string> readsVector;
+	readsVector.push_back(query);
 	//READ LOADING
 	while(not in.eof()){
 		getline(in,header);
 		getline(in,read);
-		readsVector.push_back(read);
+		if(read.size()>=k){
+			readsVector.push_back(read);
+		}
+		read="";
 	}
+	cout<<1<<endl;
 	//KMER COUNTING
 	unordered_map<string,uint> kmerCount;
 	for(uint i(0);i<readsVector.size();++i){
 		read=readsVector[i];
-		for(uint ii(0);ii<read.size();++ii){
+		for(uint ii(0);ii+k<=read.size();++ii){
 			kmerCount[read.substr(ii,k)]++;
 		}
 	}
+	vector<string> toErase;
 	for(auto it(kmerCount.begin()); it != kmerCount.end(); ++it){
 		if(it->second<solid){
-			kmerCount.erase(it->first);
+			toErase.push_back(it->first);
+		}else{
 		}
+	}
+	for(uint i(0);i<toErase.size();++i){
+		kmerCount.erase(toErase[i]);
 	}
 	//SKETCH CREATION
 	string kmer;
 	vector<vector<string>> sketchVector(readsVector.size());
 	for(uint i(0);i<readsVector.size();++i){
 		read=readsVector[i];
-		for(uint ii(0);ii<read.size();++ii){
+		for(uint ii(0);ii+k<=read.size();++ii){
 			kmer=read.substr(ii,k);
-			if(kmerCount[kmer]>=solid){
-				sketchVector[ii].push_back(kmer);
+			if(kmerCount.count(kmer)==1){
+				sketchVector[i].push_back(kmer);
 			}
 		}
 	}
+	cout<<3<<endl;
 	vector<string> sketch;
 	vector<pair<string,string>> pairList;
 	//PAIR LIST CREATION
 	for(uint i(0);i<sketchVector.size();++i){
 		sketch=sketchVector[i];
-		for(uint ii(0);ii<sketch.size()-1;++ii){
-			pairList.push_back({sketch[i],sketch[i+1]});
+		for(uint ii(0);ii+1<sketch.size();++ii){
+			pairList.push_back({sketch[ii],sketch[ii+1]});
 		}
 	}
+	cout<<4<<endl;
 	vector<string> resultBegin, resultEnd,nomom,nodaughter,result;
 	while(not kmerCount.empty()){
+		cout<<kmerCount.size()<<endl;
 		nomom=noMom(pairList,kmerCount);
 		nodaughter=noDaughter(pairList,kmerCount);
 		if(nomom.size()==1){
 			resultBegin.push_back(nomom[0]);
 		}
 		if(nodaughter.size()==1){
-			resultEnd.push_back(nomom[0]);
+			resultEnd.push_back(nodaughter[0]);
 		}
 	}
+	cout<<5<<endl;
 	reverse(resultEnd.begin(), resultEnd.end());
 	resultBegin.insert(resultBegin.end(), resultEnd.begin(), resultEnd.end());
-
+	cout<<"Result"<<endl;
 	for(uint i(0);i<resultBegin.size();++i){
 		cout<<resultBegin[i]<<" ";
 	}
