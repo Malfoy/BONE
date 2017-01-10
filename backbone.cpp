@@ -106,6 +106,20 @@ vector<string> noDaughter(vector<pair<string,string>>& pairList, unordered_map<s
 
 
 
+void eraseKmer(string kmer, vector<pair<string,string>>& pairList, unordered_map<string,uint>& kmerCount){
+	for(uint i(0);i<pairList.size();++i){
+		if(pairList[i].first!=""){
+			if(kmer==pairList[i].second){
+				pairList[i]={"",""};
+			}
+		}
+	}
+
+	kmerCount.erase(kmer);
+}
+
+
+
 //TODO RC ?
 int main(int argc, char ** argv){
 	if(argc<4){
@@ -131,18 +145,24 @@ int main(int argc, char ** argv){
 	}
 	cout<<1<<endl;
 	//KMER COUNTING
-	unordered_map<string,uint> kmerCount;
+	unordered_map<string,uint> kmerCount,kmerCountLocal;
 	for(uint i(0);i<readsVector.size();++i){
 		read=readsVector[i];
+		kmerCountLocal={};
 		for(uint ii(0);ii+k<=read.size();++ii){
-			kmerCount[read.substr(ii,k)]++;
+			kmerCountLocal[read.substr(ii,k)]++;
+		}
+		for(auto it(kmerCountLocal.begin()); it != kmerCountLocal.end(); ++it){
+			if(it->second==1){
+				kmerCount[it->first]++;
+			}
 		}
 	}
+
 	vector<string> toErase;
 	for(auto it(kmerCount.begin()); it != kmerCount.end(); ++it){
 		if(it->second<solid){
 			toErase.push_back(it->first);
-		}else{
 		}
 	}
 	for(uint i(0);i<toErase.size();++i){
@@ -172,7 +192,9 @@ int main(int argc, char ** argv){
 	}
 	cout<<4<<endl;
 	vector<string> resultBegin, resultEnd,nomom,nodaughter,result;
+	uint indiceSupress(0);
 	while(not kmerCount.empty()){
+		uint count(kmerCount.size());
 		cout<<kmerCount.size()<<endl;
 		nomom=noMom(pairList,kmerCount);
 		nodaughter=noDaughter(pairList,kmerCount);
@@ -182,16 +204,46 @@ int main(int argc, char ** argv){
 		if(nodaughter.size()==1){
 			resultEnd.push_back(nodaughter[0]);
 		}
+		if(kmerCount.size()==count){
+			cout<<"go"<<endl;
+			unordered_set<string> kmersToSupress;
+			sketch=sketchVector[indiceSupress%sketchVector.size()];
+			indiceSupress++;
+			for(uint ii(0);ii<sketch.size();++ii){
+				if(kmerCount.count(sketch[ii])!=0){
+					eraseKmer(sketch[ii],pairList,kmerCount);
+					ii=sketch.size();
+				}
+			}
+			cout<<"left"<<kmerCount.size()<<endl;
+		}else{
+			indiceSupress=0;
+		}
 	}
 	cout<<5<<endl;
 	reverse(resultEnd.begin(), resultEnd.end());
 	resultBegin.insert(resultBegin.end(), resultEnd.begin(), resultEnd.end());
-	cout<<"Result"<<endl;
-	for(uint i(0);i<resultBegin.size();++i){
-		cout<<resultBegin[i]<<" ";
+	//~ cout<<"Result"<<endl;
+	unordered_map<string, uint> kmersBackbone;
+	for(uint i(0); i < resultBegin.size(); ++i){
+		cout<< resultBegin[i] << " ";
+		kmersBackbone.insert({resultBegin[i], i});
 	}
 	cout<<endl;
 
+	//~ string kmer;
+	for(uint i(0); i < readsVector.size(); ++i){
+		read = readsVector[i];
+		for(uint ii(0); ii + k <= read.size(); ++ii){
+			kmer = read.substr(ii,k);
+			if (kmersBackbone.count(kmer)){
+				cout << kmersBackbone[kmer] << " ";
+			}
+		}
+		cout << endl;
+	}
+
 	return 0;
 }
+
 
