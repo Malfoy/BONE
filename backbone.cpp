@@ -109,7 +109,7 @@ vector<string> noDaughter(vector<pair<string,string>>& pairList, unordered_map<s
 void eraseKmer(string kmer, vector<pair<string,string>>& pairList, unordered_map<string,uint>& kmerCount){
 	for(uint i(0);i<pairList.size();++i){
 		if(pairList[i].first!=""){
-			if(kmer==pairList[i].second){
+			if(kmer==pairList[i].second or kmer==pairList[i].first){
 				pairList[i]={"",""};
 			}
 		}
