@@ -180,7 +180,7 @@ int main(int argc, char ** argv){
 		}
 		read="";
 	}
-	cout<<1<<endl;
+	//~ cout<<1<<endl;
 	//KMER COUNTING
 	unordered_map<string,uint> kmerCount,kmerCountLocal;
 	for(uint i(0);i<readsVector.size();++i){
@@ -217,7 +217,7 @@ int main(int argc, char ** argv){
 			}
 		}
 	}
-	cout<<3<<endl;
+	//~ cout<<3<<endl;
 	vector<string> sketch;
 	vector< vector<pair<string,string>> > pairList(sketchVector.size());
 	//PAIR LIST CREATION
@@ -227,7 +227,7 @@ int main(int argc, char ** argv){
 			pairList[i].push_back({sketch[ii],sketch[ii+1]});
 		}
 	}
-	cout<<4<<endl;
+	//~ cout<<4<<endl;
 	vector<string> resultBegin, resultEnd,nomom,nodaughter,result;
 	unordered_set<string> kmersBegin,kmersEnd;
 	while(not kmerCount.empty()){
@@ -242,18 +242,18 @@ int main(int argc, char ** argv){
 			resultEnd.push_back(nodaughter[0]);
 		}
 		if(kmerCount.size()==count){
-			cout<<"go"<<endl;
+			//~ cout<<"go"<<endl;
 			bool found(false);
 			uint depth(0);
 			while(not found){
 				if(kmerCount.size()<2*depth){
 					kmerCount={};
 				}
-				cout<<"cacao"<<endl;
+				//~ cout<<"cacao"<<endl;
 				kmersBegin=getFirstKmers(depth,pairList);
-				cout<<"gogogo"<<endl;
+				//~ cout<<"gogogo"<<endl;
 				kmersEnd=getLastKmers(depth,pairList);
-				cout<<"chocolat"<<endl;
+				//~ cout<<"chocolat"<<endl;
 				for(auto it(kmersBegin.begin()); it != kmersBegin.end(); ++it){
 					if(kmersEnd.count(*it)==1){
 						eraseKmer(*it,pairList,kmerCount);
@@ -266,7 +266,7 @@ int main(int argc, char ** argv){
 
 		}
 	}
-	cout<<5<<endl;
+	//~ cout<<5<<endl;
 	ofstream out("outBone.txt");
 	reverse(resultEnd.begin(), resultEnd.end());
 	resultBegin.insert(resultBegin.end(), resultEnd.begin(), resultEnd.end());
@@ -296,8 +296,10 @@ int main(int argc, char ** argv){
 		}
 		//~ out << endl;
 	}
+	uint countNew(0);
 	for(uint i(0); i < resultBegin.size(); ++i){
 		if(kmersBackbone.count(resultBegin[i])==1){
+			kmersBackbone[resultBegin[i]]=countNew++;
 			out<< resultBegin[i] << " ";
 		}
 	}
