@@ -273,12 +273,35 @@ int main(int argc, char ** argv){
 	//~ cout<<"Result"<<endl;
 	unordered_map<string, uint> kmersBackbone;
 	for(uint i(0); i < resultBegin.size(); ++i){
-		out<< resultBegin[i] << " ";
+		//~ out<< resultBegin[i] << " ";
 		kmersBackbone.insert({resultBegin[i], i});
 	}
-	out<<endl;
+	//~ out<<endl;
 
 	//~ string kmer;
+	for(uint i(0); i < readsVector.size(); ++i){
+		read = readsVector[i];
+		int last(-1);
+		for(uint ii(0); ii + k <= read.size(); ++ii){
+			kmer = read.substr(ii,k);
+			if (kmersBackbone.count(kmer)){
+				uint indice(kmersBackbone[kmer]);
+				if((int)indice<last){
+					kmersBackbone.erase(kmer);
+				}else{
+					last=indice;
+				}
+				//~ out << kmersBackbone[kmer] << " ";
+			}
+		}
+		//~ out << endl;
+	}
+	for(uint i(0); i < resultBegin.size(); ++i){
+		if(kmersBackbone.count(resultBegin[i])==1){
+			out<< resultBegin[i] << " ";
+		}
+	}
+	out<<endl;
 	for(uint i(0); i < readsVector.size(); ++i){
 		read = readsVector[i];
 		for(uint ii(0); ii + k <= read.size(); ++ii){
@@ -289,6 +312,8 @@ int main(int argc, char ** argv){
 		}
 		out << endl;
 	}
+
+
 
 	return 0;
 }
