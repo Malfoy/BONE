@@ -40,18 +40,22 @@ string getCanonical(const string& str){
 
 
 
-vector<string> noMom(vector<pair<string,string>>& pairList, unordered_map<string,uint>& kmerCount){
+vector<string> noMom(vector<vector<pair<string,string>>>& pairList, unordered_map<string,uint>& kmerCount){
 	unordered_set<string> hasMom;
 	vector<string> result;
-	for(uint i(0);i<pairList.size();++i){
-		if(pairList[i].first!=""){
-			hasMom.insert(pairList[i].second);
+	for(uint j(0);j<pairList.size();++j){
+		for(uint i(0);i<pairList[j].size();++i){
+			if(pairList[j][i].first!=""){
+				hasMom.insert(pairList[j][i].second);
+			}
 		}
 	}
-	for(uint i(0);i<pairList.size();++i){
-		if(pairList[i].first!=""){
-			if(hasMom.count(pairList[i].first)==0){
-				pairList[i]={"",""};
+	for(uint j(0);j<pairList.size();++j){
+		for(uint i(0);i<pairList[j].size();++i){
+			if(pairList[j][i].first!=""){
+				if(hasMom.count(pairList[j][i].first)==0){
+					pairList[j][i]={"",""};
+				}
 			}
 		}
 	}
@@ -72,30 +76,30 @@ vector<string> noMom(vector<pair<string,string>>& pairList, unordered_map<string
 
 
 
-vector<string> noDaughter(vector<pair<string,string>>& pairList, unordered_map<string,uint>& kmerCount){
+vector<string> noDaughter(vector<vector<pair<string,string>>>& pairList, unordered_map<string,uint>& kmerCount){
 	unordered_set<string> hasDaughter;
 	vector<string> result;
-	//~ cout<<"lol1"<<endl;
-	for(uint i(0);i<pairList.size();++i){
-		if(pairList[i].first!=""){
-			hasDaughter.insert(pairList[i].first);
-		}
-	}
-	//~ cout<<"lol2"<<endl;
-	for(uint i(0);i<pairList.size();++i){
-		if(pairList[i].first!=""){
-			if(hasDaughter.count(pairList[i].second)==0){
-				pairList[i]={"",""};
+	for(uint j(0);j<pairList.size();++j){
+		for(uint i(0);i<pairList[j].size();++i){
+			if(pairList[j][i].first!=""){
+				hasDaughter.insert(pairList[j][i].first);
 			}
 		}
 	}
-	//~ cout<<"lol3"<<endl;
+	for(uint j(0);j<pairList.size();++j){
+		for(uint i(0);i<pairList[j].size();++i){
+			if(pairList[j][i].first!=""){
+				if(hasDaughter.count(pairList[j][i].second)==0){
+					pairList[j][i]={"",""};
+				}
+			}
+		}
+	}
 	vector<string> toErase;
 	for(auto it(kmerCount.begin());it!=kmerCount.end();++it){
 		if(hasDaughter.count(it->first)==0){
 			result.push_back(it->first);
 			toErase.push_back(it->first);
-			//~ kmerCount.erase(it->first);
 		}
 	}
 	for(uint i(0);i<toErase.size();++i){
@@ -106,16 +110,49 @@ vector<string> noDaughter(vector<pair<string,string>>& pairList, unordered_map<s
 
 
 
-void eraseKmer(string kmer, vector<pair<string,string>>& pairList, unordered_map<string,uint>& kmerCount){
-	for(uint i(0);i<pairList.size();++i){
-		if(pairList[i].first!=""){
-			if(kmer==pairList[i].second or kmer==pairList[i].first){
-				pairList[i]={"",""};
+void eraseKmer(string kmer, vector<vector<pair<string,string>>>& pairList, unordered_map<string,uint>& kmerCount){
+	for(uint j(0);j<pairList.size();++j){
+		for(uint i(0);i<pairList[j].size();++i){
+			if(pairList[j][i].first!=""){
+				if(kmer==pairList[j][i].second or kmer==pairList[j][i].first){
+					pairList[j][i]={"",""};
+				}
 			}
 		}
 	}
-
 	kmerCount.erase(kmer);
+}
+
+
+
+unordered_set<string> getFirstKmers(uint depth, vector<vector<pair<string,string>>>& pairList){
+	unordered_set<string> res;
+	for(uint i(0);i<pairList.size();++i){
+		uint n(0);
+		for(uint j(0);j<pairList[i].size() and n<=depth;++j){
+			if(pairList[i][j].first!=""){
+				res.insert(pairList[i][j].first);
+				++n;
+			}
+		}
+	}
+	return res;
+}
+
+
+
+unordered_set<string> getLastKmers(uint depth, vector<vector<pair<string,string>>>& pairList){
+	unordered_set<string> res;
+	for(uint i(0);i<pairList.size();++i){
+		uint n(0);
+		for(int j(pairList[i].size()-1);j>=0 and n<=depth;--j){
+			if(pairList[i][j].first!=""){
+				res.insert(pairList[i][j].first);
+				++n;
+			}
+		}
+	}
+	return res;
 }
 
 
@@ -182,17 +219,17 @@ int main(int argc, char ** argv){
 	}
 	cout<<3<<endl;
 	vector<string> sketch;
-	vector<pair<string,string>> pairList;
+	vector< vector<pair<string,string>> > pairList(sketchVector.size());
 	//PAIR LIST CREATION
 	for(uint i(0);i<sketchVector.size();++i){
 		sketch=sketchVector[i];
 		for(uint ii(0);ii+1<sketch.size();++ii){
-			pairList.push_back({sketch[ii],sketch[ii+1]});
+			pairList[i].push_back({sketch[ii],sketch[ii+1]});
 		}
 	}
 	cout<<4<<endl;
 	vector<string> resultBegin, resultEnd,nomom,nodaughter,result;
-	uint indiceSupress(0);
+	unordered_set<string> kmersBegin,kmersEnd;
 	while(not kmerCount.empty()){
 		uint count(kmerCount.size());
 		cout<<kmerCount.size()<<endl;
@@ -206,30 +243,40 @@ int main(int argc, char ** argv){
 		}
 		if(kmerCount.size()==count){
 			cout<<"go"<<endl;
-			unordered_set<string> kmersToSupress;
-			sketch=sketchVector[indiceSupress%sketchVector.size()];
-			indiceSupress++;
-			for(uint ii(0);ii<sketch.size();++ii){
-				if(kmerCount.count(sketch[ii])!=0){
-					eraseKmer(sketch[ii],pairList,kmerCount);
-					ii=sketch.size();
+			bool found(false);
+			uint depth(0);
+			while(not found){
+				if(kmerCount.size()<2*depth){
+					kmerCount={};
 				}
+				cout<<"cacao"<<endl;
+				kmersBegin=getFirstKmers(depth,pairList);
+				cout<<"gogogo"<<endl;
+				kmersEnd=getLastKmers(depth,pairList);
+				cout<<"chocolat"<<endl;
+				for(auto it(kmersBegin.begin()); it != kmersBegin.end(); ++it){
+					if(kmersEnd.count(*it)==1){
+						eraseKmer(*it,pairList,kmerCount);
+						found=true;
+					}
+				}
+				++depth;
+
 			}
-			cout<<"left"<<kmerCount.size()<<endl;
-		}else{
-			indiceSupress=0;
+
 		}
 	}
 	cout<<5<<endl;
+	ofstream out("outBone.txt");
 	reverse(resultEnd.begin(), resultEnd.end());
 	resultBegin.insert(resultBegin.end(), resultEnd.begin(), resultEnd.end());
 	//~ cout<<"Result"<<endl;
 	unordered_map<string, uint> kmersBackbone;
 	for(uint i(0); i < resultBegin.size(); ++i){
-		cout<< resultBegin[i] << " ";
+		out<< resultBegin[i] << " ";
 		kmersBackbone.insert({resultBegin[i], i});
 	}
-	cout<<endl;
+	out<<endl;
 
 	//~ string kmer;
 	for(uint i(0); i < readsVector.size(); ++i){
@@ -237,10 +284,10 @@ int main(int argc, char ** argv){
 		for(uint ii(0); ii + k <= read.size(); ++ii){
 			kmer = read.substr(ii,k);
 			if (kmersBackbone.count(kmer)){
-				cout << kmersBackbone[kmer] << " ";
+				out << kmersBackbone[kmer] << " ";
 			}
 		}
-		cout << endl;
+		out << endl;
 	}
 
 	return 0;
