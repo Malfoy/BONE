@@ -40,120 +40,110 @@ string getCanonical(const string& str){
 
 
 
-vector<string> noMom(vector<vector<pair<string,string>>>& pairList, unordered_map<string,uint>& kmerCount){
-	unordered_set<string> hasMom;
-	vector<string> result;
-	for(uint j(0);j<pairList.size();++j){
-		for(uint i(0);i<pairList[j].size();++i){
-			if(pairList[j][i].first!=""){
-				hasMom.insert(pairList[j][i].second);
-			}
-		}
-	}
-	for(uint j(0);j<pairList.size();++j){
-		for(uint i(0);i<pairList[j].size();++i){
-			if(pairList[j][i].first!=""){
-				if(hasMom.count(pairList[j][i].first)==0){
-					pairList[j][i]={"",""};
+vector<string> withoutAdj(unordered_map<string,vector<string>>& prev, unordered_map<string,vector<string>>& next, unordered_map<string,uint>& kmerCount, vector<string>& candidate){
+	vector<string> nextCandidate,res,toSuppr;
+	string kmer,son;
+	if(candidate.size()==0){
+		for(auto it(kmerCount.begin());it!=kmerCount.end();++it){
+			kmer=(it->first);
+			if(prev.count(kmer)==0 or prev[kmer].size()==0){
+				//~ cout<<"noprevfound"<<endl;
+ 				toSuppr.push_back(kmer);
+				res.push_back(kmer);
+				for(uint j(0);j<next[kmer].size();++j){
+					son=next[kmer][j];
+					nextCandidate.push_back(son);
+					auto newEnd = std::remove(prev[son].begin(), prev[son].end(), kmer);
+					prev[son].erase(newEnd, prev[son].end());
 				}
+				next.erase(kmer);
+				prev.erase(kmer);
+			}
+		}
+		for(uint i(0);i<toSuppr.size();++i){
+			kmerCount.erase(toSuppr[i]);
+		}
+	}else{
+		for(uint i(0);i<candidate.size();++i){
+			kmer=candidate[i];
+			if(prev.count(kmer)==0 or prev[kmer].size()==0){
+				//~ cout<<"noprevfound"<<endl;
+ 				kmerCount.erase(kmer);
+				res.push_back(kmer);
+				for(uint j(0);j<next[kmer].size();++j){
+					son=next[kmer][j];
+					nextCandidate.push_back(son);
+					auto newEnd = std::remove(prev[son].begin(), prev[son].end(), kmer);
+					prev[son].erase(newEnd, prev[son].end());
+				}
+				next.erase(kmer);
+				prev.erase(kmer);
 			}
 		}
 	}
-	vector<string> toErase;
-	for(auto it(kmerCount.begin());it!=kmerCount.end();++it){
-		if(hasMom.count(it->first)==0){
-			//~ cout<<it->first<<endl;
-			result.push_back(it->first);
-			toErase.push_back(it->first);
-			//~ kmerCount.erase(it->first);
-		}
-	}
-	for(uint i(0);i<toErase.size();++i){
-		kmerCount.erase(toErase[i]);
-	}
-	return result;
+	sort( nextCandidate.begin(), nextCandidate.end() );
+	nextCandidate.erase( unique( nextCandidate.begin(), nextCandidate.end() ), nextCandidate.end() );
+	candidate=nextCandidate;
+	return res;
 }
 
 
 
-vector<string> noDaughter(vector<vector<pair<string,string>>>& pairList, unordered_map<string,uint>& kmerCount){
-	unordered_set<string> hasDaughter;
-	vector<string> result;
-	for(uint j(0);j<pairList.size();++j){
-		for(uint i(0);i<pairList[j].size();++i){
-			if(pairList[j][i].first!=""){
-				hasDaughter.insert(pairList[j][i].first);
-			}
-		}
-	}
-	for(uint j(0);j<pairList.size();++j){
-		for(uint i(0);i<pairList[j].size();++i){
-			if(pairList[j][i].first!=""){
-				if(hasDaughter.count(pairList[j][i].second)==0){
-					pairList[j][i]={"",""};
-				}
-			}
-		}
-	}
-	vector<string> toErase;
-	for(auto it(kmerCount.begin());it!=kmerCount.end();++it){
-		if(hasDaughter.count(it->first)==0){
-			result.push_back(it->first);
-			toErase.push_back(it->first);
-		}
-	}
-	for(uint i(0);i<toErase.size();++i){
-		kmerCount.erase(toErase[i]);
-	}
-	return result;
-}
-
-
-
-void eraseKmer(string kmer, vector<vector<pair<string,string>>>& pairList, unordered_map<string,uint>& kmerCount){
-	for(uint j(0);j<pairList.size();++j){
-		for(uint i(0);i<pairList[j].size();++i){
-			if(pairList[j][i].first!=""){
-				if(kmer==pairList[j][i].second or kmer==pairList[j][i].first){
-					pairList[j][i]={"",""};
-				}
-			}
-		}
-	}
+void eraseKmer(unordered_map<string,vector<string>>& prev, unordered_map<string,vector<string>>& next, unordered_map<string,uint>& kmerCount,string kmer){
 	kmerCount.erase(kmer);
+	string son;
+	for(uint j(0);j<next[kmer].size();++j){
+		son=next[kmer][j];
+		auto newEnd = std::remove(prev[son].begin(), prev[son].end(), kmer);
+		prev[son].erase(newEnd, prev[son].end());
+	}
+	next.erase(kmer);
+	for(uint j(0);j<prev[kmer].size();++j){
+		son=prev[kmer][j];
+		auto newEnd = std::remove(next[son].begin(), next[son].end(), kmer);
+		next[son].erase(newEnd, next[son].end());
+	}
+	prev.erase(kmer);
 }
 
 
 
-unordered_set<string> getFirstKmers(uint depth, vector<vector<pair<string,string>>>& pairList){
+unordered_set<string> getFirstKmers(uint depth, unordered_map<string,uint>& kmerCount, vector<vector<string>>& sketchVector){
 	unordered_set<string> res;
-	for(uint i(0);i<pairList.size();++i){
+	for(uint i(0);i<sketchVector.size();++i){
 		uint n(0);
-		for(uint j(0);j<pairList[i].size() and n<=depth;++j){
-			if(pairList[i][j].first!=""){
-				res.insert(pairList[i][j].first);
-				++n;
+		for(uint j(0);j<sketchVector[i].size();++j){
+			if(kmerCount.count(sketchVector[i][j])==1){
+				res.insert(sketchVector[i][j]);
+				if(++n>=depth){
+					break;
+				}
 			}
 		}
 	}
+	//~ cout<<res.size()<<endl;
 	return res;
 }
 
 
 
-unordered_set<string> getLastKmers(uint depth, vector<vector<pair<string,string>>>& pairList){
+unordered_set<string> getLastKmers(uint depth, unordered_map<string,uint>& kmerCount, vector<vector<string>>& sketchVector){
 	unordered_set<string> res;
-	for(uint i(0);i<pairList.size();++i){
+	for(uint i(0);i<sketchVector.size();++i){
 		uint n(0);
-		for(int j(pairList[i].size()-1);j>=0 and n<=depth;--j){
-			if(pairList[i][j].first!=""){
-				res.insert(pairList[i][j].first);
-				++n;
+		for(int j(sketchVector[i].size()-1);j>=0;--j){
+			if(kmerCount.count(sketchVector[i][j])==1){
+				res.insert(sketchVector[i][j]);
+				if(++n>=depth){
+					break;
+				}
 			}
 		}
 	}
+	//~ cout<<res.size()<<endl;
 	return res;
 }
+
 
 
 
@@ -180,7 +170,7 @@ int main(int argc, char ** argv){
 		}
 		read="";
 	}
-	//~ cout<<1<<endl;
+
 	//KMER COUNTING
 	unordered_map<string,uint> kmerCount,kmerCountLocal;
 	for(uint i(0);i<readsVector.size();++i){
@@ -195,7 +185,6 @@ int main(int argc, char ** argv){
 			}
 		}
 	}
-
 	vector<string> toErase;
 	for(auto it(kmerCount.begin()); it != kmerCount.end(); ++it){
 		if(it->second<solid){
@@ -205,6 +194,7 @@ int main(int argc, char ** argv){
 	for(uint i(0);i<toErase.size();++i){
 		kmerCount.erase(toErase[i]);
 	}
+
 	//SKETCH CREATION
 	string kmer;
 	vector<vector<string>> sketchVector(readsVector.size());
@@ -217,56 +207,63 @@ int main(int argc, char ** argv){
 			}
 		}
 	}
-	//~ cout<<3<<endl;
+
 	vector<string> sketch;
-	vector< vector<pair<string,string>> > pairList(sketchVector.size());
-	//PAIR LIST CREATION
+	unordered_map<string,vector<string>> next,prev;
+	//~ cout<<"adj"<<endl;
+	//ADJ CREATION
 	for(uint i(0);i<sketchVector.size();++i){
 		sketch=sketchVector[i];
 		for(uint ii(0);ii+1<sketch.size();++ii){
-			pairList[i].push_back({sketch[ii],sketch[ii+1]});
+			next[sketch[ii]].push_back(sketch[ii+1]);
+			prev[sketch[ii+1]].push_back(sketch[ii]);
 		}
 	}
-	//~ cout<<4<<endl;
-	vector<string> resultBegin, resultEnd,nomom,nodaughter,result;
+	//~ cout<<"GO"<<endl;
+	vector<string> resultBegin, resultEnd, noPrev, noNext, result,candidateNext,candidatePrev;
 	unordered_set<string> kmersBegin,kmersEnd;
 	while(not kmerCount.empty()){
+		//~ cout<<kmerCount.size()<<endl;
 		uint count(kmerCount.size());
-		cout<<kmerCount.size()<<endl;
-		nomom=noMom(pairList,kmerCount);
-		nodaughter=noDaughter(pairList,kmerCount);
-		if(nomom.size()==1){
-			resultBegin.push_back(nomom[0]);
+		noPrev=withoutAdj(prev, next,kmerCount,candidatePrev);
+		noNext=withoutAdj(next, prev,kmerCount,candidateNext);
+		//~ cout<<"nonono" <<noPrev.size()<<" "<<noNext.size()<<endl;cin.get();
+		if(noPrev.size()==1){
+			resultBegin.push_back(noPrev[0]);
 		}
-		if(nodaughter.size()==1){
-			resultEnd.push_back(nodaughter[0]);
+		if(noNext.size()==1){
+			resultEnd.push_back(noNext[0]);
 		}
+		//~ cout<<resultBegin.size()<<" "<<resultEnd.size()<<endl;
 		if(kmerCount.size()==count){
-			//~ cout<<"go"<<endl;
 			bool found(false);
-			uint depth(0);
+			uint depth(1);
 			while(not found){
 				if(kmerCount.size()<2*depth){
 					kmerCount={};
+					break;
 				}
-				//~ cout<<"cacao"<<endl;
-				kmersBegin=getFirstKmers(depth,pairList);
+				//~ cout<<"cacao"<<endl;cin.get();
+				kmersBegin=getFirstKmers(depth,kmerCount,sketchVector);
 				//~ cout<<"gogogo"<<endl;
-				kmersEnd=getLastKmers(depth,pairList);
+				kmersEnd=getLastKmers(depth,kmerCount,sketchVector);
 				//~ cout<<"chocolat"<<endl;
-				for(auto it(kmersBegin.begin()); it != kmersBegin.end(); ++it){
+				for(auto it(kmersBegin.begin()); it != kmersBegin.end() and not found; ++it){
 					if(kmersEnd.count(*it)==1){
-						eraseKmer(*it,pairList,kmerCount);
+						eraseKmer(prev,next,kmerCount,*it);
 						found=true;
+						//~ break;
 					}
 				}
-				++depth;
-
+				//~ cout<<"lol"<<endl;cin.get();
+				//~ cout<<kmerCount.size()<<endl;;
+				candidatePrev=candidateNext={};
+				depth*=2;
 			}
 
 		}
 	}
-	//~ cout<<5<<endl;
+	cout<<resultBegin.size()<<" "<<resultEnd.size()<<endl;
 	ofstream out("outBone.txt");
 	reverse(resultEnd.begin(), resultEnd.end());
 	resultBegin.insert(resultBegin.end(), resultEnd.begin(), resultEnd.end());
@@ -277,8 +274,6 @@ int main(int argc, char ** argv){
 		kmersBackbone.insert({resultBegin[i], i});
 	}
 	//~ out<<endl;
-
-	//~ string kmer;
 	for(uint i(0); i < readsVector.size(); ++i){
 		read = readsVector[i];
 		int last(-1);

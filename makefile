@@ -1,5 +1,5 @@
 CC=g++
-CFLAGS=  -Wall  -Ofast -std=c++11  -flto -pipe -funit-at-a-time
+CFLAGS=  -Wall  -Ofast -std=c++11  -flto -pipe -funit-at-a-time -fmax-errors=3
 CFLAGS+=$(LOL)
 LDFLAGS=-flto
 
