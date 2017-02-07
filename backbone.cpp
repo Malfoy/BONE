@@ -66,18 +66,24 @@ vector<string> withoutAdj(unordered_map<string,vector<string>>& prev, unordered_
 	}else{
 		for(uint i(0);i<candidate.size();++i){
 			kmer=candidate[i];
-			if(prev.count(kmer)==0 or prev[kmer].size()==0){
-				//~ cout<<"noprevfound"<<endl;
- 				kmerCount.erase(kmer);
-				res.push_back(kmer);
-				for(uint j(0);j<next[kmer].size();++j){
-					son=next[kmer][j];
-					nextCandidate.push_back(son);
-					auto newEnd = std::remove(prev[son].begin(), prev[son].end(), kmer);
-					prev[son].erase(newEnd, prev[son].end());
+			if(kmerCount.count(kmer)!=0){
+				if(prev.count(kmer)==0 or prev[kmer].size()==0){
+					//~ cout<<"noprevfound"<<endl;
+					kmerCount.erase(kmer);
+					res.push_back(kmer);
+					for(uint j(0);j<next[kmer].size();++j){
+						son=next[kmer][j];
+						//~ if(kmerCount.count(son)!=0){
+							nextCandidate.push_back(son);
+						//~ }
+						auto newEnd = std::remove(prev[son].begin(), prev[son].end(), kmer);
+						prev[son].erase(newEnd, prev[son].end());
+					}
+					next.erase(kmer);
+					prev.erase(kmer);
 				}
-				next.erase(kmer);
-				prev.erase(kmer);
+			}else{
+				//~ cout<<"wow"<<endl;
 			}
 		}
 	}
@@ -210,7 +216,6 @@ int main(int argc, char ** argv){
 
 	vector<string> sketch;
 	unordered_map<string,vector<string>> next,prev;
-	//~ cout<<"adj"<<endl;
 	//ADJ CREATION
 	for(uint i(0);i<sketchVector.size();++i){
 		sketch=sketchVector[i];
@@ -219,23 +224,23 @@ int main(int argc, char ** argv){
 			prev[sketch[ii+1]].push_back(sketch[ii]);
 		}
 	}
-	//~ cout<<"GO"<<endl;
 	vector<string> resultBegin, resultEnd, noPrev, noNext, result,candidateNext,candidatePrev;
 	unordered_set<string> kmersBegin,kmersEnd;
+	//MAIN LOOP
 	while(not kmerCount.empty()){
-		//~ cout<<kmerCount.size()<<endl;
+		//~ cout<<"go"<<endl;
 		uint count(kmerCount.size());
 		noPrev=withoutAdj(prev, next,kmerCount,candidatePrev);
 		noNext=withoutAdj(next, prev,kmerCount,candidateNext);
-		//~ cout<<"nonono" <<noPrev.size()<<" "<<noNext.size()<<endl;cin.get();
 		if(noPrev.size()==1){
 			resultBegin.push_back(noPrev[0]);
 		}
 		if(noNext.size()==1){
 			resultEnd.push_back(noNext[0]);
 		}
-		//~ cout<<resultBegin.size()<<" "<<resultEnd.size()<<endl;
+		//IF PARADOX
 		if(kmerCount.size()==count){
+			//~ cout<<"paradox"<<endl;cin.get();
 			bool found(false);
 			uint depth(1);
 			while(not found){
@@ -243,11 +248,8 @@ int main(int argc, char ** argv){
 					kmerCount={};
 					break;
 				}
-				//~ cout<<"cacao"<<endl;cin.get();
 				kmersBegin=getFirstKmers(depth,kmerCount,sketchVector);
-				//~ cout<<"gogogo"<<endl;
 				kmersEnd=getLastKmers(depth,kmerCount,sketchVector);
-				//~ cout<<"chocolat"<<endl;
 				for(auto it(kmersBegin.begin()); it != kmersBegin.end() and not found; ++it){
 					if(kmersEnd.count(*it)==1){
 						eraseKmer(prev,next,kmerCount,*it);
@@ -255,8 +257,6 @@ int main(int argc, char ** argv){
 						//~ break;
 					}
 				}
-				//~ cout<<"lol"<<endl;cin.get();
-				//~ cout<<kmerCount.size()<<endl;;
 				candidatePrev=candidateNext={};
 				depth*=2;
 			}
@@ -267,13 +267,10 @@ int main(int argc, char ** argv){
 	ofstream out("outBone.txt");
 	reverse(resultEnd.begin(), resultEnd.end());
 	resultBegin.insert(resultBegin.end(), resultEnd.begin(), resultEnd.end());
-	//~ cout<<"Result"<<endl;
 	unordered_map<string, uint> kmersBackbone;
 	for(uint i(0); i < resultBegin.size(); ++i){
-		//~ out<< resultBegin[i] << " ";
 		kmersBackbone.insert({resultBegin[i], i});
 	}
-	//~ out<<endl;
 	for(uint i(0); i < readsVector.size(); ++i){
 		read = readsVector[i];
 		int last(-1);
@@ -286,10 +283,8 @@ int main(int argc, char ** argv){
 				}else{
 					last=indice;
 				}
-				//~ out << kmersBackbone[kmer] << " ";
 			}
 		}
-		//~ out << endl;
 	}
 	uint countNew(0);
 	for(uint i(0); i < resultBegin.size(); ++i){
