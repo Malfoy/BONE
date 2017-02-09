@@ -151,9 +151,164 @@ unordered_set<string> getLastKmers(uint depth, unordered_map<string,uint>& kmerC
 }
 
 
+int THEFUNCTION(const vector<string>& readsVector, const uint k, const uint solid, vector<string>& kmersBackbonevector, vector<vector<uint>>& backbones,vector<vector<uint>>& backbonesPositions){
+	backbones.resize(readsVector.size());
+	backbonesPositions.resize(readsVector.size());
+	string query,read,header;
+	kmersBackbonevector.clear();
+	//KMER COUNTING
+	unordered_map<string,uint> kmerCount,kmerCountLocal;
+	unordered_set<string> duplicateKmer;
+	for(uint i(0);i<readsVector.size();++i){
+		read=readsVector[i];
+		kmerCountLocal={};
+		for(uint ii(0);ii+k<=read.size();++ii){
+			kmerCountLocal[read.substr(ii,k)]++;
+		}
+		for(auto it(kmerCountLocal.begin()); it != kmerCountLocal.end(); ++it){
+			if(it->second==1 and duplicateKmer.count(it->first)==0){
+				kmerCount[it->first]++;
+			}else{
+				duplicateKmer.insert(it->first);
+			}
+		}
+	}
+	vector<string> toErase;
+	for(auto it(kmerCount.begin()); it != kmerCount.end(); ++it){
+		if(it->second<solid){
+			toErase.push_back(it->first);
+		}
+	}
+	for(uint i(0);i<toErase.size();++i){
+		kmerCount.erase(toErase[i]);
+	}
+
+	//SKETCH CREATION
+	string kmer;
+	vector<vector<string>> sketchVector(readsVector.size());
+	for(uint i(0);i<readsVector.size();++i){
+		read=readsVector[i];
+		for(uint ii(0);ii+k<=read.size();++ii){
+			kmer=read.substr(ii,k);
+			if(kmerCount.count(kmer)==1){
+				sketchVector[i].push_back(kmer);
+			}
+		}
+	}
+
+	vector<string> sketch;
+	unordered_map<string,vector<string>> next,prev;
+	//ADJ CREATION
+	for(uint i(0);i<sketchVector.size();++i){
+		sketch=sketchVector[i];
+		for(uint ii(0);ii+1<sketch.size();++ii){
+			next[sketch[ii]].push_back(sketch[ii+1]);
+			prev[sketch[ii+1]].push_back(sketch[ii]);
+		}
+	}
+	vector<string> resultBegin, resultEnd, noPrev, noNext, result,candidateNext,candidatePrev;
+	unordered_set<string> kmersBegin,kmersEnd;
+	//MAIN LOOP
+	while(not kmerCount.empty()){
+		//~ cout<<"go"<<endl;
+		uint count(kmerCount.size());
+		noPrev=withoutAdj(prev, next,kmerCount,candidatePrev);
+		noNext=withoutAdj(next, prev,kmerCount,candidateNext);
+		if(noPrev.size()==1){
+			resultBegin.push_back(noPrev[0]);
+		}
+		if(noNext.size()==1){
+			resultEnd.push_back(noNext[0]);
+		}
+		//IF PARADOX
+		if(kmerCount.size()==count){
+			//~ cout<<"paradox"<<endl;cin.get();
+			bool found(false);
+			uint depth(1);
+			while(not found){
+				if(kmerCount.size()<2*depth){
+					kmerCount={};
+					break;
+				}
+				kmersBegin=getFirstKmers(depth,kmerCount,sketchVector);
+				kmersEnd=getLastKmers(depth,kmerCount,sketchVector);
+				for(auto it(kmersBegin.begin()); it != kmersBegin.end() and not found; ++it){
+					if(kmersEnd.count(*it)==1){
+						eraseKmer(prev,next,kmerCount,*it);
+						found=true;
+						//~ break;
+					}
+				}
+				candidatePrev=candidateNext={};
+				depth*=2;
+			}
+
+		}
+	}
+	cout<<resultBegin.size()<<" "<<resultEnd.size()<<endl;
+	//~ ofstream out("outBone.txt");
+	reverse(resultEnd.begin(), resultEnd.end());
+	resultBegin.insert(resultBegin.end(), resultEnd.begin(), resultEnd.end());
+	unordered_map<string, uint> kmersBackbone;
+	for(uint i(0); i < resultBegin.size(); ++i){
+		kmersBackbone.insert({resultBegin[i], i});
+	}
+	for(uint i(0); i < readsVector.size(); ++i){
+		read = readsVector[i];
+		int last(-1);
+		for(uint ii(0); ii + k <= read.size(); ++ii){
+			kmer = read.substr(ii,k);
+			if (kmersBackbone.count(kmer)){
+				uint indice(kmersBackbone[kmer]);
+				if((int)indice<last){
+					kmersBackbone.erase(kmer);
+				}else{
+					last=indice;
+				}
+			}
+		}
+	}
 
 
-//TODO RC ?
+	uint countNew(0);
+	//PRINT BACKBONE
+	for(uint i(0); i < resultBegin.size(); ++i){
+		if(kmersBackbone.count(resultBegin[i])==1){
+			kmersBackbone[resultBegin[i]]=countNew++;
+			kmersBackbonevector.push_back(resultBegin[i]);
+			//~ out<< resultBegin[i] << " ";
+		}
+	}
+	//~ out<<endl;
+	//PRINT for each reads the backbone
+	for(uint i(0); i < readsVector.size(); ++i){
+		read = readsVector[i];
+		for(uint ii(0); ii + k <= read.size(); ++ii){
+			kmer = read.substr(ii,k);
+			if (kmersBackbone.count(kmer)){
+				//~ out << kmersBackbone[kmer] << " ";
+				backbones[i].push_back( kmersBackbone[kmer] );
+			}
+		}
+		//~ out << endl;
+		for(uint ii(0); ii + k <= read.size(); ++ii){
+			kmer = read.substr(ii,k);
+			if (kmersBackbone.count(kmer)){
+				backbonesPositions[i].push_back( kmersBackbone[kmer] );
+				//~ out << ii << " ";
+			}
+		}
+		//~ out << endl;
+	}
+
+
+
+	return 0;
+}
+
+
+
+
 int main(int argc, char ** argv){
 	if(argc<4){
 		cout<<"[read file (fasta oneline)] [kmer size] [solidity threshold value]"<<endl;
@@ -179,6 +334,7 @@ int main(int argc, char ** argv){
 
 	//KMER COUNTING
 	unordered_map<string,uint> kmerCount,kmerCountLocal;
+	unordered_set<string> duplicateKmer;
 	for(uint i(0);i<readsVector.size();++i){
 		read=readsVector[i];
 		kmerCountLocal={};
@@ -186,8 +342,10 @@ int main(int argc, char ** argv){
 			kmerCountLocal[read.substr(ii,k)]++;
 		}
 		for(auto it(kmerCountLocal.begin()); it != kmerCountLocal.end(); ++it){
-			if(it->second==1){
+			if(it->second==1 and duplicateKmer.count(it->first)==0){
 				kmerCount[it->first]++;
+			}else{
+				duplicateKmer.insert(it->first);
 			}
 		}
 	}
@@ -286,7 +444,10 @@ int main(int argc, char ** argv){
 			}
 		}
 	}
+
+
 	uint countNew(0);
+	//PRINT BACKBONE
 	for(uint i(0); i < resultBegin.size(); ++i){
 		if(kmersBackbone.count(resultBegin[i])==1){
 			kmersBackbone[resultBegin[i]]=countNew++;
@@ -294,12 +455,20 @@ int main(int argc, char ** argv){
 		}
 	}
 	out<<endl;
+	//PRINT for each reads the backbone
 	for(uint i(0); i < readsVector.size(); ++i){
 		read = readsVector[i];
 		for(uint ii(0); ii + k <= read.size(); ++ii){
 			kmer = read.substr(ii,k);
 			if (kmersBackbone.count(kmer)){
 				out << kmersBackbone[kmer] << " ";
+			}
+		}
+		out << endl;
+		for(uint ii(0); ii + k <= read.size(); ++ii){
+			kmer = read.substr(ii,k);
+			if (kmersBackbone.count(kmer)){
+				out << ii << " ";
 			}
 		}
 		out << endl;
